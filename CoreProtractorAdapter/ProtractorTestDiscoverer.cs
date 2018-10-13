@@ -76,7 +76,7 @@ namespace ProtractorTestAdapter
                 case TestFramework.Jasmine:
                     return GetTestNameFromFileJS(source);
                 default:
-                    var packageJson = Helper.FindPackageJson(source);
+                    var packageJson = Helper.FindInDirectoryTree(source, "package.json");
                     var key = Path.GetFileNameWithoutExtension(source);
                     if (!String.IsNullOrEmpty(packageJson))
                     {

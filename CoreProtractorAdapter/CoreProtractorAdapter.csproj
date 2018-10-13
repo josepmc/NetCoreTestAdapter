@@ -6,6 +6,7 @@
     <AssemblyName>CoreProtractor.TestAdapter</AssemblyName>
     <RootNamespace>ProtractorTestAdapter</RootNamespace>
     <Configurations>Debug;Release;ReleaseCore</Configurations>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,7 +22,7 @@
   <ItemGroup>
     <PackageReference Include="DotNet.Glob" Version="2.1.1" />
     <PackageReference Include="Microsoft.TestPlatform.ObjectModel" Version="15.8.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="System.Json" Version="4.5.0" />
   </ItemGroup>
 
 </Project>

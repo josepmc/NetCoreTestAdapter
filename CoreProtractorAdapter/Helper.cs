@@ -26,10 +26,10 @@ namespace ProtractorAdapter
             return string.Join(SEPARATOR.ToString(), prefixParts);
         }
 
-        public static string FindPackageJson(string source)
+        public static string FindInDirectoryTree(string source, string fileName)
         {
             DirectoryInfo directory = File.Exists(source) && !Directory.Exists(source) ? Directory.GetParent(source) : new DirectoryInfo(source);
-            while (directory != null && directory.GetFiles("package.json").Length == 0)
+            while (directory != null && directory.GetFiles(fileName).Length == 0)
             {
                 directory = directory.Parent;
             }
@@ -37,12 +37,14 @@ namespace ProtractorAdapter
         }
         public static string FindExePath(string exe)
         {
+            var pathSeparator = Environment.OSVersion.Platform == PlatformID.Win32NT ? ';' : ':';
             exe = Environment.ExpandEnvironmentVariables(exe);
             if (!File.Exists(exe))
             {
                 if (Path.GetDirectoryName(exe) == String.Empty)
                 {
-                    foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(';'))
+                    
+                    foreach (string test in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(pathSeparator))
                     {
                         string path = test.Trim();
                         if (!String.IsNullOrEmpty(path) && File.Exists(path = Path.Combine(path, exe)))

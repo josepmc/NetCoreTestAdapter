@@ -1,5 +1,7 @@
-﻿using System;
+﻿using ProtractorAdapter;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,7 +20,7 @@ namespace ProtractorTestAdapter
         private static XElement _config;
         public static XElement config { get {
                 if (_config != null) return _config;
-                var path = Path.Combine(Environment.CurrentDirectory, "adapter.xml");
+                var path = Helper.FindInDirectoryTree(Environment.CurrentDirectory, "adapter.xml") + Path.DirectorySeparatorChar + "adapter.xml";
                 return _config = (File.Exists(path) ? XElement.Parse(File.ReadAllText(path)) : null);
             }
         }

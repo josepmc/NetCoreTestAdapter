@@ -5,7 +5,7 @@ using Microsoft.VisualStudio.TestPlatform.ObjectModel.Adapter;
 using Microsoft.VisualStudio.TestPlatform.ObjectModel.Logging;
 using System.Diagnostics;
 using System.IO;
-using Newtonsoft.Json;
+using System.Json;
 using ProtractorAdapter;
 
 namespace ProtractorTestAdapter
@@ -87,7 +87,8 @@ namespace ProtractorTestAdapter
             }
             catch(Exception e)
             {
-                frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exception during test execution: " +e.Message);
+                frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exception during test execution: " + e.Message);
+                frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: " + e.StackTrace);
             }
         }
 
@@ -126,17 +127,17 @@ namespace ProtractorTestAdapter
                 return resultOutCome;
             }
 
-            var results = JsonConvert.DeserializeObject<List<ProtractorResult>>(jsonResult);
+            var results = JsonObject.Parse(jsonResult);
             resultOutCome.Outcome = TestOutcome.Passed;
-            foreach (var result in results)
+            foreach (JsonObject result in results)
             {
-                foreach (var assert in result.assertions)
+                foreach (JsonObject assert in result["assertions"])
                 {
-                    if (!assert.passed)
+                    if (!assert["passed"])
                     {
                         resultOutCome.Outcome = TestOutcome.Failed;
-                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorStackTrace}\n{assert.stackTrace}";
-                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorMessage}\n{assert.errorMsg}";
+                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorStackTrace}\n{assert["stackTrace"]}";
+                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorMessage}\n{assert["errorMsg"]}";
                     }
                 }
             }
@@ -151,8 +152,12 @@ namespace ProtractorTestAdapter
 
             resultFile = AppConfig.ResultsPath ?? Path.GetTempPath() + Path.DirectorySeparatorChar + resultFile;
             frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Using result file: " + resultFile);
-            var cwd = Helper.FindPackageJson(test.Source);
+            var cwd = Helper.FindInDirectoryTree(test.Source, "package.json");
             var exe = Helper.FindExePath(AppConfig.Program);
+
+            //frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exe " + exe);
+            //frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Cwd " + cwd);
+            //frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: ResultFile " + resultFile);
 
             ProcessStartInfo info = new ProcessStartInfo()
             {
