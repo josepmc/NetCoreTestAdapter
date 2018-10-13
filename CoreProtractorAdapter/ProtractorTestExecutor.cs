@@ -175,9 +175,9 @@ namespace ProtractorTestAdapter
             Process p = new Process();
             p.StartInfo = info;
             p.OutputDataReceived += (sender, args) => { if (args != null && !string.IsNullOrEmpty(args.Data))
-                    frameworkHandle.SendMessage(TestMessageLevel.Informational, args.Data); };
-            p.ErrorDataReceived += (sender, args) => { if (args != null && !string.IsNullOrEmpty(args.Data))
                     frameworkHandle.SendMessage(TestMessageLevel.Warning, args.Data); };
+            p.ErrorDataReceived += (sender, args) => { if (args != null && !string.IsNullOrEmpty(args.Data))
+                    frameworkHandle.SendMessage(TestMessageLevel.Error, args.Data); };
             p.Start();
             p.BeginOutputReadLine();
             p.BeginErrorReadLine();
