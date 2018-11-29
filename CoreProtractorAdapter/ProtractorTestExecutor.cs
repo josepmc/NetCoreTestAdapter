@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Json;
 using ProtractorAdapter;
+using System.Threading;
 
 namespace ProtractorTestAdapter
 {
@@ -147,12 +148,13 @@ namespace ProtractorTestAdapter
 
         private string RunProtractor(TestCase test, IRunContext runContext, IFrameworkHandle frameworkHandle)
         {
-            var resultFile = Path.GetFileNameWithoutExtension(test.Source);
+            var resultFile = Path.GetFileNameWithoutExtension(test.CodeFilePath);
             resultFile += ".result.json";
 
             resultFile = AppConfig.ResultsPath ?? Path.GetTempPath() + Path.DirectorySeparatorChar + resultFile;
             frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Using result file: " + resultFile);
-            var cwd = Helper.FindInDirectoryTree(test.Source, "package.json");
+            // Can't use test.Source as it's going to be in lowercase
+            var cwd = Helper.FindInDirectoryTree(test.CodeFilePath, "package.json");
             var exe = Helper.FindExePath(AppConfig.Program);
 
             //frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exe " + exe);
@@ -161,7 +163,7 @@ namespace ProtractorTestAdapter
 
             ProcessStartInfo info = new ProcessStartInfo()
             {
-                Arguments = string.Format("{0} --resultJsonOutputFile \"{1}\" --specs \"{2}\"", AppConfig.Arguments, resultFile, test.Source),
+                Arguments = string.Format("{0} --resultJsonOutputFile \"{1}\" --specs \"{2}\"", AppConfig.Arguments, resultFile, test.CodeFilePath),
                 FileName = exe,
                 WorkingDirectory = cwd,//runContext.SolutionDirectory,
                 UseShellExecute = false,
@@ -174,15 +176,41 @@ namespace ProtractorTestAdapter
 
             Process p = new Process();
             p.StartInfo = info;
-            p.OutputDataReceived += (sender, args) => { if (args != null && !string.IsNullOrEmpty(args.Data))
-                    frameworkHandle.SendMessage(TestMessageLevel.Warning, args.Data); };
-            p.ErrorDataReceived += (sender, args) => { if (args != null && !string.IsNullOrEmpty(args.Data))
-                    frameworkHandle.SendMessage(TestMessageLevel.Error, args.Data); };
-            p.Start();
-            p.BeginOutputReadLine();
-            p.BeginErrorReadLine();
-            p.WaitForExit();
-            frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Complete. Exit code: "+ p.ExitCode.ToString());
+
+            using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
+            using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
+            {
+                p.OutputDataReceived += (sender, e) => {
+                    if (e.Data == null)
+                    {
+                        outputWaitHandle.Set();
+                    }
+                    else if(!String.IsNullOrWhiteSpace(e.Data))
+                    {
+                        frameworkHandle.SendMessage(TestMessageLevel.Warning, e.Data);
+                    }
+                };
+                p.ErrorDataReceived += (sender, e) =>
+                {
+                    if (e.Data == null)
+                    {
+                        errorWaitHandle.Set();
+                    }
+                    else if (!String.IsNullOrWhiteSpace(e.Data))
+                    {
+                        frameworkHandle.SendMessage(TestMessageLevel.Error, e.Data);
+                    }
+                };
+
+                p.Start();
+                p.BeginOutputReadLine();
+                p.BeginErrorReadLine();
+                p.WaitForExit();
+                outputWaitHandle.WaitOne(10000);
+                errorWaitHandle.WaitOne(10000);
+                    // Process completed. Check process.ExitCode here.
+                    frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Complete. Exit code: " + p.ExitCode.ToString());
+            }
 
             return resultFile;
         }
