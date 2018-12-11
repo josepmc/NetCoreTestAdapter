@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -33,11 +34,11 @@ namespace ProtractorAdapter
             {
                 directory = directory.Parent;
             }
-            return directory == null ? null : directory.FullName;
+            return directory?.FullName;
         }
         public static string FindExePath(string exe)
         {
-            var pathSeparator = Environment.OSVersion.Platform == PlatformID.Win32NT ? ';' : ':';
+            var pathSeparator = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? ';' : ':';
             exe = Environment.ExpandEnvironmentVariables(exe);
             if (!File.Exists(exe))
             {
@@ -57,7 +58,7 @@ namespace ProtractorAdapter
                 else throw new FileNotFoundException(new FileNotFoundException().Message, exe);
             }
             exe = Path.GetFullPath(exe);
-            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 if (File.Exists(exe + ".exe")) exe += ".exe";
                 else if (File.Exists(exe + ".bat")) exe += ".bat";

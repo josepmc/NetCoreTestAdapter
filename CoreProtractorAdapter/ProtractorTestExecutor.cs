@@ -54,7 +54,7 @@ namespace ProtractorTestAdapter
                 }
                 RunTests(tests, runContext, frameworkHandle);
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exception during test execution: " + e.Message);
             }
@@ -86,7 +86,7 @@ namespace ProtractorTestAdapter
                     frameworkHandle.RecordEnd(test, testOutcome.Outcome);
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: Exception during test execution: " + e.Message);
                 frameworkHandle.SendMessage(TestMessageLevel.Error, "Framework: " + e.StackTrace);
@@ -118,7 +118,7 @@ namespace ProtractorTestAdapter
                     {
                         jsonResult = textReader.ReadToEnd();
                     }
-                    stream.Close();
+                    stream.Dispose();
                 }
             }
             else
@@ -174,8 +174,10 @@ namespace ProtractorTestAdapter
             frameworkHandle.SendMessage(TestMessageLevel.Informational, $"Framework: Starting {exe} on '{cwd}' with arguments: {info.Arguments}");
 
 
-            Process p = new Process();
-            p.StartInfo = info;
+            Process p = new Process
+            {
+                StartInfo = info
+            };
 
             using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
             using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
@@ -185,7 +187,7 @@ namespace ProtractorTestAdapter
                     {
                         outputWaitHandle.Set();
                     }
-                    else if(!String.IsNullOrWhiteSpace(e.Data))
+                    else if (!String.IsNullOrWhiteSpace(e.Data))
                     {
                         frameworkHandle.SendMessage(TestMessageLevel.Warning, e.Data);
                     }
@@ -208,8 +210,8 @@ namespace ProtractorTestAdapter
                 p.WaitForExit();
                 outputWaitHandle.WaitOne(10000);
                 errorWaitHandle.WaitOne(10000);
-                    // Process completed. Check process.ExitCode here.
-                    frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Complete. Exit code: " + p.ExitCode.ToString());
+                // Process completed. Check process.ExitCode here.
+                frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Complete. Exit code: " + p.ExitCode.ToString());
             }
 
             return resultFile;

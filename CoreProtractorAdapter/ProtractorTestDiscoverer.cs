@@ -19,7 +19,7 @@ namespace ProtractorTestAdapter
         {
             //if (Debugger.IsAttached) Debugger.Break();
             //else Debugger.Launch();
-            string baseDir = Environment.CurrentDirectory;
+            string baseDir = Directory.GetCurrentDirectory();
             try
             {
                 baseDir = XElement.Parse(discoveryContext.RunSettings.SettingsXml).Element("RunConfiguration").Element("SolutionDirectory").Value;
@@ -113,7 +113,7 @@ namespace ProtractorTestAdapter
                             lineNumber++;
                         }
                     }
-                    stream.Close();
+                    stream.Dispose();
                 }
             }
             return testNames;

@@ -18,9 +18,9 @@ namespace ProtractorTestAdapter
     public static class AppConfig
     {
         private static XElement _config;
-        public static XElement config { get {
+        public static XElement Config { get {
                 if (_config != null) return _config;
-                var path = Helper.FindInDirectoryTree(Environment.CurrentDirectory, "adapter.xml") + Path.DirectorySeparatorChar + "adapter.xml";
+                var path = Helper.FindInDirectoryTree(Directory.GetCurrentDirectory(), "adapter.xml") + Path.DirectorySeparatorChar + "adapter.xml";
                 return _config = (File.Exists(path) ? XElement.Parse(File.ReadAllText(path)) : null);
             }
         }
@@ -28,16 +28,18 @@ namespace ProtractorTestAdapter
         {
             try
             {
-                return config.Element(element).Value;
+                return Config.Element(element).Value;
             }
-            catch (Exception e) { return null; }
+            catch (Exception ex) {
+                Console.WriteLine($"Couldn't find {element}: ${ex.Data}");
+                return null;
+            }
         }
 
         public const string VSTestFileExtension = ".feature"; // This can't be dynamic, we need to recompile the extension
         public static string Include { get => GetConfig("include") ?? $"**/*{VSTestFileExtension}"; }
         public static TestFramework Framework { get {
-                TestFramework result;
-                return Enum.TryParse<TestFramework>(GetConfig("framework"), true, out result) ? result : TestFramework.None;
+                return Enum.TryParse<TestFramework>(GetConfig("framework"), true, out TestFramework result) ? result : TestFramework.None;
             }
         }
         public static string ResultsPath { get => GetConfig("results") ?? null; }
