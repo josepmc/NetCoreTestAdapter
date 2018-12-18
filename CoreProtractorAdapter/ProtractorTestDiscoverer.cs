@@ -22,8 +22,15 @@ namespace ProtractorTestAdapter
             string baseDir = Directory.GetCurrentDirectory();
             try
             {
-                baseDir = XElement.Parse(discoveryContext.RunSettings.SettingsXml).Element("RunConfiguration").Element("SolutionDirectory").Value;
-            } catch (Exception) { }
+                var parsed = XElement.Parse(discoveryContext.RunSettings.SettingsXml);
+                try
+                {
+                    baseDir = parsed.Element("RunConfiguration").Element("SolutionDirectory").Value;
+                }
+                catch (Exception) { }
+                discoveryContext.RunSettings.GetSettings(AppConfig.Name).Load(parsed.Element(AppConfig.Name).CreateReader());
+            }
+            catch (Exception ex) { Console.WriteLine($"Framework: Error while loading SettingsXml - {ex.Message} {ex.Data}"); }
             logger.SendMessage(TestMessageLevel.Informational, Process.GetCurrentProcess().ProcessName + " Id: " + Process.GetCurrentProcess().Id.ToString());
             foreach (var source in sources)
             {
@@ -54,10 +61,12 @@ namespace ProtractorTestAdapter
                     // NOTE! Keep in mind that testName.Key needs to ALWAYS be the same!
                     // It can't be a path or whatsoever. Otherwise it would vary accross environments and VSTS won't detect it
                     // Thus returning a cryptic message stating that tests were found but *not* discovered (e.g. 1 test found, 0 discovered)
-                    var testCase = new TestCase(testName.Key, ProtractorTestExecutor.ExecutorUri, normalizedSource);
+                    var testCase = new TestCase(testName.Key, ProtractorTestExecutor.ExecutorUri, normalizedSource)
+                    {
+                        CodeFilePath = source,
+                        LineNumber = testName.Value
+                    };
                     tests.Add(testCase);
-                    testCase.CodeFilePath = source;
-                    testCase.LineNumber = testName.Value;
 
                     if (discoverySink != null)
                     {
@@ -86,7 +95,7 @@ namespace ProtractorTestAdapter
                     }
                     return new Dictionary<string, int>
                     {
-                        { key, 0 }
+                        { key.Replace("/",".").Replace("\\", "."), 0 }
                     };
             }
         }

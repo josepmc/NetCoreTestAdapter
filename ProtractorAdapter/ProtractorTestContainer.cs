@@ -28,8 +28,7 @@ namespace ProtractorTestAdapter
 
         public int CompareTo(ITestContainer other)
         {
-            var container = other as TestContainer;
-            if (container == null)
+            if (!(other is TestContainer container))
             {
                 return -1;
             }

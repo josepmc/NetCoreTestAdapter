@@ -59,10 +59,7 @@ namespace ProtractorTestAdapter.EventWatchers
 
         public void OnSolutionUnloaded()
         {
-            if(SolutionUnloaded != null)
-            {
-                SolutionUnloaded(this, new System.EventArgs());
-            }
+            SolutionUnloaded?.Invoke(this, new System.EventArgs());
         }
 
 

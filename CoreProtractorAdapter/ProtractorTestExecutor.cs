@@ -8,6 +8,7 @@ using System.IO;
 using System.Json;
 using ProtractorAdapter;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace ProtractorTestAdapter
 {
@@ -41,6 +42,12 @@ namespace ProtractorTestAdapter
             //else Debugger.Launch();
             try
             {
+                var parsed = XElement.Parse(runContext.RunSettings.SettingsXml);
+                runContext.RunSettings.GetSettings(AppConfig.Name).Load(parsed.Element(AppConfig.Name).CreateReader());
+            }
+            catch (Exception ex) { Console.WriteLine($"Framework: Error while loading SettingsXml - {ex.Message} {ex.Data}"); }
+            try
+            {
                 frameworkHandle.SendMessage(TestMessageLevel.Informational, "Framework: Running from process:" + Process.GetCurrentProcess() + " ID:" + Process.GetCurrentProcess().Id.ToString());
                 foreach (var source in sources)
                 {
@@ -69,6 +76,13 @@ namespace ProtractorTestAdapter
         {
             //if (Debugger.IsAttached) Debugger.Break();
             //else Debugger.Launch();
+
+            try
+            {
+                var parsed = XElement.Parse(runContext.RunSettings.SettingsXml);
+                runContext.RunSettings.GetSettings(AppConfig.Name).Load(parsed.Element(AppConfig.Name).CreateReader());
+            }
+            catch (Exception ex) { Console.WriteLine($"Framework: Error while loading SettingsXml - {ex.Message} {ex.Data}"); }
             m_cancelled = false;
             try
             {
@@ -125,22 +139,37 @@ namespace ProtractorTestAdapter
             {
                 resultOutCome.Outcome = TestOutcome.Failed;
                 resultOutCome.ErrorMessage = "Framework: Error! No results were created. Check your arguments, use /logger:console,verbosity=detailed or /diag:results.log";
+                resultOutCome.ErrorStackTrace = "Framework Error";
                 return resultOutCome;
             }
 
-            var results = JsonObject.Parse(jsonResult);
+            var results = JsonValue.Parse(jsonResult);
             resultOutCome.Outcome = TestOutcome.Passed;
-            foreach (JsonObject result in results)
+            foreach (JsonObject result in results) // For each test run
             {
-                foreach (JsonObject assert in result["assertions"])
-                {
-                    if (!assert["passed"])
+                if(result["assertions"] != null)
+                    foreach (JsonObject assert in result["assertions"])
                     {
-                        resultOutCome.Outcome = TestOutcome.Failed;
-                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorStackTrace}\n{assert["stackTrace"]}";
-                        resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorMessage}\n{assert["errorMsg"]}";
+                        if (!assert["passed"])
+                        {
+                            resultOutCome.Outcome = TestOutcome.Failed;
+                            resultOutCome.ErrorStackTrace = $"{resultOutCome.ErrorStackTrace}\n{assert["stackTrace"]}";
+                            resultOutCome.ErrorMessage = $"{resultOutCome.ErrorMessage}\n{assert["errorMsg"]}";
+                        }
                     }
+                var duration = -1;
+                int.TryParse($"{result["duration"]}", out duration);
+                if (duration >= 0)
+                {
+                    resultOutCome.Duration = new TimeSpan(duration * 10000);
                 }
+            }
+
+            // This is needed as the TRX logger will fail if there's stacktrace but no error message
+            if(resultOutCome.Outcome == TestOutcome.Failed)
+            {
+                resultOutCome.ErrorMessage = $"Test Error!\n{resultOutCome.ErrorMessage}".Replace("\\n", "\n");
+                resultOutCome.ErrorStackTrace = $"Test Error!\n{resultOutCome.ErrorStackTrace}".Replace("\\n", "\n");
             }
 
             return resultOutCome;
@@ -189,7 +218,8 @@ namespace ProtractorTestAdapter
                     }
                     else if (!String.IsNullOrWhiteSpace(e.Data))
                     {
-                        frameworkHandle.SendMessage(TestMessageLevel.Warning, e.Data);
+                        // Console.WriteLine(e.Data);
+                        frameworkHandle.SendMessage(TestMessageLevel.Informational, e.Data);
                     }
                 };
                 p.ErrorDataReceived += (sender, e) =>
@@ -198,8 +228,9 @@ namespace ProtractorTestAdapter
                     {
                         errorWaitHandle.Set();
                     }
-                    else if (!String.IsNullOrWhiteSpace(e.Data))
+                    else if (!string.IsNullOrWhiteSpace(e.Data))
                     {
+                        // Console.Error.WriteLine(e.Data);
                         frameworkHandle.SendMessage(TestMessageLevel.Error, e.Data);
                     }
                 };
